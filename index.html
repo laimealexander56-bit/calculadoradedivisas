@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de cambio CLP ↔ Multi-moneda</title>
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --panel: #ffffff;
+    --border: #e0ddd4;
+    --text: #2c2c2a;
+    --text-soft: #6b6a64;
+    --accent: #0f6e56;
+    --accent-soft: #e1f5ee;
+    --accent2: #d85a30;
+    --accent2-soft: #faece7;
+    --radius: 10px;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { color: var(--text-soft); font-size: 14px; margin: 0 0 24px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    padding: 10px 16px; border: none; background: none; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: var(--text-soft);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  .card .hint { font-size: 13px; color: var(--text-soft); margin: 0 0 16px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+
+  label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text-soft); }
+  input[type="number"], input[type="text"], select {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; color: var(--text);
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .field { margin-bottom: 14px; }
+  .row-inline { display: flex; gap: 10px; align-items: flex-end; }
+  .row-inline > div { flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; color: var(--text-soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; }
+  td.num, th.num { text-align: right; font-family: var(--mono); }
+  tr:last-child td { border-bottom: none; }
+  .tier-edit-cell input { width: 90px; padding: 6px 8px; font-size: 13px; }
+  .del-btn {
+    background: var(--accent2-soft); color: var(--accent2); border: none;
+    border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 14px; font-weight: 600;
+  }
+  .add-btn, .primary-btn, .ghost-btn {
+    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; padding: 9px 14px; border: 1px solid var(--border);
+  }
+  .add-btn { background: var(--accent-soft); color: var(--accent); border: none; }
+  .primary-btn { background: var(--accent); color: #fff; border: none; }
+  .ghost-btn { background: #fff; color: var(--text); }
+  .add-btn:hover, .primary-btn:hover, .ghost-btn:hover { opacity: 0.85; }
+
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 500; }
+  .pill-pos { background: var(--accent-soft); color: var(--accent); }
+  .pill-neg { background: var(--accent2-soft); color: var(--accent2); }
+
+  .result-box {
+    background: var(--accent-soft); border-radius: var(--radius); padding: 20px;
+    text-align: center; margin-top: 16px;
+  }
+  .result-box .amount { font-size: 28px; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .result-box .label { font-size: 13px; color: var(--text-soft); margin-bottom: 6px; }
+  .result-box .tier-tag { font-size: 12px; color: var(--text-soft); margin-top: 6px; }
+
+  .swap-btn {
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    width: 36px; height: 36px; cursor: pointer; font-size: 16px; display: flex;
+    align-items: center; justify-content: center; margin: 0 auto;
+  }
+
+  .wa-box {
+    background: #1f2d24; color: #d9f7ea; border-radius: var(--radius);
+    padding: 16px; font-family: var(--mono); font-size: 13px; white-space: pre-wrap;
+    line-height: 1.7; margin-bottom: 12px;
+  }
+  .currency-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .currency-tab {
+    padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: #fff; cursor: pointer; font-size: 13px; font-weight: 500;
+  }
+  .currency-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .small-note { font-size: 12px; color: var(--text-soft); margin-top: 8px; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Calculadora de cambio CLP ↔ multi-moneda</h1>
+  <p class="subtitle">Precios en tiempo real desde Binance P2P. Funciona conectado a internet cuando está publicado en Vercel.</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="precios">Precios base</button>
+    <button class="tab-btn" data-tab="tramos">Tramos y márgenes</button>
+    <button class="tab-btn" data-tab="admin">Panel admin</button>
+    <button class="tab-btn" data-tab="publica">Calculadora pública</button>
+    <button class="tab-btn" data-tab="whatsapp">Mensaje WhatsApp</button>
+  </div>
+
+  <!-- TAB: PRECIOS BASE -->
+  <div class="tab-panel active" id="tab-precios">
+    <div class="card">
+      <div class="flex-between">
+        <div>
+          <h2>Precios de referencia (Binance P2P)</h2>
+          <p class="hint">Se obtienen automáticamente desde Binance P2P (promedio de 3-10 anuncios). También puedes editarlos a mano si quieres simular otros valores.</p>
+        </div>
+        <button class="primary-btn" id="refreshBtn" onclick="refreshPrices()">Actualizar precios</button>
+      </div>
+      <div class="small-note" id="pricesStatus" style="margin-bottom:14px;"></div>
+      <div class="field">
+        <label>Precio CLP por 1 USDT (comprar USDT con CLP en Chile)</label>
+        <input type="number" id="clpPerUsdt" value="921" step="0.01">
+      </div>
+      <div class="small-note">Moneda destino activa: <strong id="precios-currency-label"></strong></div>
+      <div class="field" style="margin-top:14px;">
+        <label id="destPerUsdtLabel">Precio en moneda destino por 1 USDT (vender USDT, lado destino)</label>
+        <input type="number" id="destPerUsdt" value="9.33" step="0.0001">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Monedas destino</h2>
+      <p class="hint">Selecciona la moneda destino activa para configurar precios, tramos y ver resultados. Cada moneda tiene su propio precio base, tramos y multiplicadores.</p>
+      <div class="currency-tabs" id="currencyTabs"></div>
+      <div class="row-inline" style="margin-top:8px;">
+        <div>
+          <label>Código moneda (ej: VES, ARS, PEN)</label>
+          <input type="text" id="newCurrencyCode" maxlength="4" placeholder="VES">
+        </div>
+        <div>
+          <label>Nombre / país</label>
+          <input type="text" id="newCurrencyName" placeholder="Venezuela">
+        </div>
+        <div style="flex:0;">
+          <button class="add-btn" onclick="addCurrency()">+ Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tasa bruta calculada</h2>
+      <p class="hint">Esta es la conversión "real" de mercado, sin margen: cuánto recibirías realmente vía Binance, pasando por USDT.</p>
+      <div id="brutaResult"></div>
+    </div>
+  </div>
+
+  <!-- TAB: TRAMOS Y MARGENES -->
+  <div class="tab-panel" id="tab-tramos">
+    <div class="card">
+      <div class="flex-between">
+        <div>
+          <h2>Tramos por monto — <span id="tramos-currency-label"></span></h2>
+          <p class="hint">Define los tramos de monto (en CLP) y el multiplicador de margen de cada uno. La tasa publicada se recalcula sola: tasa publicada = tasa bruta × multiplicador.</p>
+        </div>
+        <button class="add-btn" onclick="addTier()">+ Agregar tramo</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Desde (CLP)</th>
+            <th>Hasta (CLP)</th>
+            <th class="num">Multiplicador</th>
+            <th class="num">Margen %</th>
+            <th class="num">Tasa publicada</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tiersBody"></tbody>
+      </table>
+      <p class="small-note">El multiplicador se aplica sobre la tasa bruta (destino por CLP). Un multiplicador menor a 1 reduce lo que recibe el cliente; la diferencia es tu ganancia. "Hasta" en blanco o vacío significa "sin límite superior".</p>
+    </div>
+  </div>
+
+  <!-- TAB: PANEL ADMIN -->
+  <div class="tab-panel" id="tab-admin">
+    <div class="card">
+      <h2>Resumen por tramo — <span id="admin-currency-label"></span></h2>
+      <p class="hint">Para un monto de ejemplo dentro de cada tramo, se muestra cuánto recibe el cliente (con tu margen), cuánto te entrega Binance realmente (sin margen) y tu ganancia.</p>
+      <table>
+        <thead>
+          <tr>
+            <th class="num">CLP enviados</th>
+            <th class="num">USDT recibidos</th>
+            <th class="num">Recibe cliente</th>
+            <th class="num">Te entrega Binance (bruto)</th>
+            <th class="num">Ganancia (destino)</th>
+            <th class="num">Ganancia (CLP)</th>
+          </tr>
+        </thead>
+        <tbody id="adminBody"></tbody>
+      </table>
+      <p class="small-note">El "CLP enviados" de ejemplo para cada tramo es su monto mínimo ("Desde"). El último tramo (sin tope) usa 2 veces su monto mínimo como ejemplo.</p>
+    </div>
+  </div>
+
+  <!-- TAB: CALCULADORA PUBLICA -->
+  <div class="tab-panel" id="tab-publica">
+    <div class="card">
+      <h2>Calculadora pública</h2>
+      <p class="hint">Vista del cliente: ingresa un monto y ve cuánto recibe, ya con la tasa publicada (margen incluido). No se muestra la tasa bruta ni la ganancia.</p>
+
+      <div class="grid2">
+        <div class="field">
+          <label id="pub-from-label">Envías (CLP)</label>
+          <input type="number" id="pubAmountFrom" value="100000" step="1">
+        </div>
+        <div class="field" style="display:flex; align-items:flex-end;">
+          <div style="width:100%;">
+            <label id="pub-to-label">Recibe en (moneda)</label>
+            <select id="pubCurrency"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-between" style="margin: 4px 0 8px;">
+        <span></span>
+        <button class="swap-btn" onclick="swapDirection()" title="Invertir dirección">⇄</button>
+      </div>
+
+      <div class="result-box" id="pubResultBox"></div>
+    </div>
+  </div>
+
+  <!-- TAB: WHATSAPP -->
+  <div class="tab-panel" id="tab-whatsapp">
+    <div class="card">
+      <h2>Mensaje para WhatsApp</h2>
+      <p class="hint">Genera un mensaje listo para copiar y pegar, con las tasas publicadas vigentes para cada tramo y moneda destino.</p>
+      <div class="wa-box" id="waMessage"></div>
+      <button class="primary-btn" onclick="copyMessage()">Copiar mensaje</button>
+      <span id="copyConfirm" class="small-note" style="margin-left:10px;"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---------- ESTADO GLOBAL ----------
+let clpPerUsdt = 921; // CLP por 1 USDT
+
+// Cada moneda tiene: nombre, flag(emoji), perUsdt (precio destino por 1 USDT), y tramos propios
+let currencies = {
+  BOB: {
+    name: "Bolivia",
+    flag: "🇧🇴",
+    perUsdt: 9.33,
+    tiers: [
+      { from: 0,      to: 50000,  mult: 0.964 },
+      { from: 50000,  to: 100000, mult: 0.972 },
+      { from: 100000, to: 500000, mult: 0.981 },
+      { from: 500000, to: null,   mult: 0.991 }
+    ]
+  },
+  VES: {
+    name: "Venezuela",
+    flag: "🇻🇪",
+    perUsdt: 130,
+    tiers: [
+      { from: 0,      to: 50000,  mult: 0.95 },
+      { from: 50000,  to: 100000, mult: 0.965 },
+      { from: 100000, to: 500000, mult: 0.975 },
+      { from: 500000, to: null,   mult: 0.985 }
+    ]
+  },
+  ARS: {
+    name: "Argentina",
+    flag: "🇦🇷",
+    perUsdt: 1450,
+    tiers: [
+      { from: 0,      to: 50000,  mult: 0.96 },
+      { from: 50000,  to: 100000, mult: 0.97 },
+      { from: 100000, to: 500000, mult: 0.978 },
+      { from: 500000, to: null,   mult: 0.988 }
+    ]
+  }
+};
+
+let activeCurrency = "BOB";
+let pubDirection = "toDest"; // "toDest" = CLP -> moneda destino, "fromDest" = moneda destino -> CLP
+
+// ---------- HELPERS ----------
+function fmt(num, decimals) {
+  if (num === null || num === undefined || isNaN(num)) return "—";
+  return Number(num).toLocaleString("es-CL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function cur() {
+  return currencies[activeCurrency];
+}
+
+// Tasa bruta: cuántas unidades de moneda destino equivalen a 1 CLP, vía USDT
+function tasaBrutaDestPorClp() {
+  const usdtPorClp = 1 / clpPerUsdt;
+  return usdtPorClp * cur().perUsdt; // destino por 1 CLP
+}
+
+// Tasa bruta expresada como "destino por cada 1000 CLP" (formato tipo el ejemplo de WhatsApp)
+function tasaBrutaPorMil() {
+  return tasaBrutaDestPorClp() * 1000;
+}
+
+function tasaPublicadaPorMil(mult) {
+  return tasaBrutaPorMil() * mult;
+}
+
+// Encuentra el tramo correspondiente a un monto en CLP
+function findTier(amountClp) {
+  const tiers = cur().tiers;
+  for (let i = 0; i < tiers.length; i++) {
+    const t = tiers[i];
+    if (amountClp >= t.from && (t.to === null || amountClp <= t.to)) {
+      return t;
+    }
+  }
+  return tiers[tiers.length - 1];
+}
+
+// ---------- RENDER: TABS ----------
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ---------- RENDER: CURRENCY TABS ----------
+function renderCurrencyTabs() {
+  const wrap = document.getElementById("currencyTabs");
+  wrap.innerHTML = "";
+  Object.keys(currencies).forEach(code => {
+    const c = currencies[code];
+    const btn = document.createElement("button");
+    btn.className = "currency-tab" + (code === activeCurrency ? " active" : "");
+    btn.textContent = c.flag + " " + code + " (" + c.name + ")";
+    btn.onclick = () => { activeCurrency = code; renderAll(); refreshPrices(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function addCurrency() {
+  const codeInput = document.getElementById("newCurrencyCode");
+  const nameInput = document.getElementById("newCurrencyName");
+  let code = codeInput.value.trim().toUpperCase();
+  let name = nameInput.value.trim();
+  if (!code) { alert("Ingresa un código de moneda (ej: PEN)"); return; }
+  if (currencies[code]) { alert("Esa moneda ya existe."); return; }
+  if (!name) name = code;
+  currencies[code] = {
+    name: name,
+    flag: "🏳️",
+    perUsdt: 1,
+    tiers: [
+      { from: 0,      to: 50000,  mult: 0.96 },
+      { from: 50000,  to: 100000, mult: 0.97 },
+      { from: 100000, to: 500000, mult: 0.98 },
+      { from: 500000, to: null,   mult: 0.99 }
+    ]
+  };
+  activeCurrency = code;
+  codeInput.value = "";
+  nameInput.value = "";
+  renderAll();
+}
+
+// ---------- RENDER: PRECIOS BASE ----------
+function renderPrecios() {
+  document.getElementById("clpPerUsdt").value = clpPerUsdt;
+  document.getElementById("destPerUsdt").value = cur().perUsdt;
+  document.getElementById("precios-currency-label").textContent = cur().flag + " " + activeCurrency + " — " + cur().name;
+  document.getElementById("destPerUsdtLabel").textContent = "Precio en " + activeCurrency + " por 1 USDT (vender USDT, lado " + cur().name + ")";
+
+  const bruta = tasaBrutaPorMil();
+  const usdtPor100k = 100000 / clpPerUsdt;
+  const destPor100k = usdtPor100k * cur().perUsdt;
+
+  document.getElementById("brutaResult").innerHTML = `
+    <table>
+      <tr><td>CLP por 1 USDT</td><td class="num">${fmt(clpPerUsdt, 2)}</td></tr>
+      <tr><td>${activeCurrency} por 1 USDT</td><td class="num">${fmt(cur().perUsdt, 4)}</td></tr>
+      <tr><td>Tasa bruta: ${activeCurrency} por cada 1.000 CLP</td><td class="num">${fmt(bruta, 4)}</td></tr>
+      <tr><td>Ejemplo: 100.000 CLP → USDT</td><td class="num">${fmt(usdtPor100k, 4)} USDT</td></tr>
+      <tr><td>Ejemplo: esos USDT → ${activeCurrency}</td><td class="num">${fmt(destPor100k, 2)} ${activeCurrency}</td></tr>
+    </table>
+  `;
+}
+
+document.getElementById("clpPerUsdt").addEventListener("input", e => {
+  clpPerUsdt = parseFloat(e.target.value) || 0;
+  renderAll();
+});
+document.getElementById("destPerUsdt").addEventListener("input", e => {
+  cur().perUsdt = parseFloat(e.target.value) || 0;
+  renderAll();
+});
+
+// ---------- RENDER: TRAMOS ----------
+function renderTiers() {
+  document.getElementById("tramos-currency-label").textContent = cur().flag + " " + activeCurrency + " — " + cur().name;
+  const body = document.getElementById("tiersBody");
+  body.innerHTML = "";
+  cur().tiers.forEach((t, idx) => {
+    const tr = document.createElement("tr");
+    const pub = tasaPublicadaPorMil(t.mult);
+    const marginPct = (1 - t.mult) * 100;
+    tr.innerHTML = `
+      <td class="tier-edit-cell"><input type="number" value="${t.from}" step="1000" onchange="updateTier(${idx}, 'from', this.value)"></td>
+      <td class="tier-edit-cell"><input type="number" value="${t.to === null ? '' : t.to}" step="1000" placeholder="sin límite" onchange="updateTier(${idx}, 'to', this.value)"></td>
+      <td class="num tier-edit-cell"><input type="number" value="${t.mult}" step="0.001" onchange="updateTier(${idx}, 'mult', this.value)"></td>
+      <td class="num"><span class="pill ${marginPct >= 0 ? 'pill-pos' : 'pill-neg'}">${fmt(marginPct, 2)}%</span></td>
+      <td class="num">${fmt(pub, 4)}</td>
+      <td><button class="del-btn" onclick="removeTier(${idx})" title="Eliminar tramo">×</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function updateTier(idx, field, value) {
+  const tiers = cur().tiers;
+  if (field === "to") {
+    tiers[idx].to = value === "" ? null : parseFloat(value);
+  } else if (field === "from") {
+    tiers[idx].from = parseFloat(value) || 0;
+  } else if (field === "mult") {
+    tiers[idx].mult = parseFloat(value) || 0;
+  }
+  renderAll();
+}
+
+function addTier() {
+  const tiers = cur().tiers;
+  const last = tiers[tiers.length - 1];
+  const newFrom = last.to !== null ? last.to : (last.from + 100000);
+  last.to = newFrom;
+  tiers.push({ from: newFrom, to: null, mult: 0.99 });
+  renderAll();
+}
+
+function removeTier(idx) {
+  const tiers = cur().tiers;
+  if (tiers.length <= 1) { alert("Debe quedar al menos un tramo."); return; }
+  tiers.splice(idx, 1);
+  if (tiers.length > 0) tiers[tiers.length - 1].to = null;
+  renderAll();
+}
+
+// ---------- RENDER: ADMIN ----------
+function renderAdmin() {
+  document.getElementById("admin-currency-label").textContent = cur().flag + " " + activeCurrency + " — " + cur().name;
+  const body = document.getElementById("adminBody");
+  body.innerHTML = "";
+
+  const tasaBrutaDest = tasaBrutaDestPorClp(); // destino por 1 CLP
+
+  cur().tiers.forEach(t => {
+    const exampleClp = t.to !== null ? t.from || 1 : (t.from || 1) * 2;
+    const sampleClp = exampleClp > 0 ? exampleClp : 1;
+
+    const usdtRecibidos = sampleClp / clpPerUsdt;
+    const destBruto = usdtRecibidos * cur().perUsdt;       // lo que realmente entrega Binance
+    const destCliente = destBruto * t.mult;                 // lo que recibe el cliente con margen
+    const gananciaDest = destBruto - destCliente;           // ganancia en moneda destino
+    const gananciaClp = gananciaDest / tasaBrutaDest;        // convertida a CLP usando tasa bruta
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="num">${fmt(sampleClp, 0)}</td>
+      <td class="num">${fmt(usdtRecibidos, 4)}</td>
+      <td class="num">${fmt(destCliente, 2)} ${activeCurrency}</td>
+      <td class="num">${fmt(destBruto, 2)} ${activeCurrency}</td>
+      <td class="num">${fmt(gananciaDest, 2)} ${activeCurrency}</td>
+      <td class="num">${fmt(gananciaClp, 0)} CLP</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+// ---------- RENDER: CALCULADORA PUBLICA ----------
+function renderPublicaSelector() {
+  const sel = document.getElementById("pubCurrency");
+  const prevVal = sel.value;
+  sel.innerHTML = "";
+  Object.keys(currencies).forEach(code => {
+    const c = currencies[code];
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = c.flag + " " + code + " — " + c.name;
+    sel.appendChild(opt);
+  });
+  if (currencies[prevVal]) sel.value = prevVal;
+  else sel.value = activeCurrency;
+}
+
+document.getElementById("pubCurrency").addEventListener("change", e => {
+  activeCurrency = e.target.value;
+  renderAll();
+  refreshPrices();
+});
+
+document.getElementById("pubAmountFrom").addEventListener("input", renderPublica);
+
+function swapDirection() {
+  pubDirection = pubDirection === "toDest" ? "fromDest" : "toDest";
+  renderPublica();
+}
+
+function renderPublica() {
+  const code = activeCurrency;
+  const c = cur();
+  const fromLabel = document.getElementById("pub-from-label");
+  const toLabel = document.getElementById("pub-to-label");
+  const input = document.getElementById("pubAmountFrom");
+  const amount = parseFloat(input.value) || 0;
+
+  const tasaBrutaDest = tasaBrutaDestPorClp(); // destino por 1 CLP
+
+  let resultHtml = "";
+
+  if (pubDirection === "toDest") {
+    fromLabel.textContent = "Envías (CLP)";
+    toLabel.textContent = "Recibe en (" + code + ")";
+
+    const tier = findTier(amount);
+    const tasaPubPorClp = tasaBrutaDest * tier.mult; // destino por 1 CLP, con margen
+    const recibido = amount * tasaPubPorClp;
+    const tasaPorMil = tasaPubPorClp * 1000;
+
+    resultHtml = `
+      <div class="label">El cliente recibe</div>
+      <div class="amount">${fmt(recibido, 2)} ${code}</div>
+      <div class="tier-tag">Tasa aplicada: ${fmt(tasaPorMil, 4)} ${code} por cada 1.000 CLP &middot; Tramo: ${fmt(tier.from,0)} ${tier.to === null ? "en adelante" : "– " + fmt(tier.to,0)} CLP</div>
+    `;
+  } else {
+    fromLabel.textContent = "Envías (" + code + ")";
+    toLabel.textContent = "Recibe en (CLP)";
+
+    // Para BOB->CLP: necesitamos saber qué tramo CLP corresponde. Estimamos el CLP
+    // equivalente usando la tasa del tramo que contiene ese CLP estimado (iterativo simple).
+    // Aproximación: usamos primero la tasa bruta para estimar el CLP, encontramos el tramo,
+    // y recalculamos con la tasa publicada de ese tramo.
+    const tasaBrutaPorClpDest = tasaBrutaDest; // destino por CLP
+    const clpEstimadoBruto = amount / tasaBrutaPorClpDest;
+    const tier = findTier(clpEstimadoBruto);
+    const tasaPubPorClp = tasaBrutaDest * tier.mult; // destino por 1 CLP
+    const clpResultado = amount / tasaPubPorClp;
+    const tasaPorMil = tasaPubPorClp * 1000;
+
+    resultHtml = `
+      <div class="label">El cliente recibe</div>
+      <div class="amount">${fmt(clpResultado, 0)} CLP</div>
+      <div class="tier-tag">Tasa aplicada: ${fmt(tasaPorMil, 4)} ${code} por cada 1.000 CLP &middot; Tramo estimado: ${fmt(tier.from,0)} ${tier.to === null ? "en adelante" : "– " + fmt(tier.to,0)} CLP</div>
+    `;
+  }
+
+  document.getElementById("pubResultBox").innerHTML = resultHtml;
+}
+
+// ---------- RENDER: WHATSAPP ----------
+function renderWhatsApp() {
+  const c = cur();
+  const today = new Date();
+  const dias = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const dia = dias[today.getDay()];
+  const fechaStr = today.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  const numEmojis = ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+  function rateEmoji(rateStr) {
+    return rateStr.split("").map(ch => {
+      if (ch >= "0" && ch <= "9") return numEmojis[parseInt(ch)];
+      if (ch === ".") return "▪️";
+      if (ch === ",") return "▪️";
+      return ch;
+    }).join("");
+  }
+
+  const lines = [];
+  lines.push("📈🚀 Continúamos con el cambio 📊💵");
+  lines.push(dia + ": " + fechaStr);
+  lines.push("");
+
+  const sortedTiers = [...c.tiers].sort((a,b) => a.from - b.from);
+
+  sortedTiers.forEach((t, idx) => {
+    const rate = tasaPublicadaPorMil(t.mult);
+    const rateStr = rate.toFixed(2);
+
+    if (t.to === null) {
+      lines.push("Montos de " + fmt(t.from,0) + " arriba:");
+      lines.push("        " + rateEmoji(rateStr));
+      const ex1 = t.from;
+      const ex2 = t.from * 2;
+      lines.push("🇨🇱 " + fmt(ex1,0) + " = " + fmt(ex1*(rate/1000),0) + activeCurrency + " " + c.flag);
+      lines.push("🇨🇱 " + fmt(ex2,0) + " = " + fmt(ex2*(rate/1000),0) + activeCurrency + " " + c.flag);
+    } else if (idx === 0) {
+      lines.push("Menores a " + fmt(t.to,0) + " a: " + rateStr);
+    } else {
+      lines.push("Montos arriba de " + fmt(t.from,0) + ":");
+      lines.push("        " + rateEmoji(rateStr));
+      const ex = t.from;
+      lines.push("🇨🇱 " + fmt(ex,0) + " = " + fmt(ex*(rate/1000),0) + activeCurrency + " " + c.flag);
+    }
+    lines.push("");
+  });
+
+  document.getElementById("waMessage").textContent = lines.join("\n").trim();
+}
+
+function copyMessage() {
+  const text = document.getElementById("waMessage").textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const conf = document.getElementById("copyConfirm");
+    conf.textContent = "Copiado ✓";
+    setTimeout(() => conf.textContent = "", 2000);
+  }).catch(() => {
+    const conf = document.getElementById("copyConfirm");
+    conf.textContent = "No se pudo copiar automáticamente. Selecciona el texto manualmente.";
+  });
+}
+
+// ---------- CONEXION A BINANCE (vía función proxy en /api/binance-price) ----------
+// Esta URL relativa funciona automáticamente cuando la página está publicada en Vercel,
+// porque la función vive en la misma carpeta del proyecto (api/binance-price.js).
+const API_BASE = "/api/binance-price";
+
+async function fetchBinancePrice(fiat, tradeType, amount) {
+  let url = API_BASE + "?fiat=" + encodeURIComponent(fiat) + "&tradeType=" + tradeType;
+  if (amount) url += "&amount=" + encodeURIComponent(amount);
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    const errData = await resp.json().catch(() => ({}));
+    throw new Error(errData.error || ("Error " + resp.status));
+  }
+  const data = await resp.json();
+  return data.price;
+}
+
+async function refreshPrices() {
+  const status = document.getElementById("pricesStatus");
+  const btn = document.getElementById("refreshBtn");
+  btn.disabled = true;
+  btn.textContent = "Consultando Binance...";
+  status.textContent = "Consultando precios en Binance P2P...";
+
+  try {
+    // CLP: queremos COMPRAR USDT con CLP -> tradeType BUY, fiat CLP
+    const clpPrice = await fetchBinancePrice("CLP", "BUY");
+    // Moneda destino: queremos VENDER USDT y recibir esa moneda -> tradeType SELL
+    const destPrice = await fetchBinancePrice(activeCurrency, "SELL");
+
+    clpPerUsdt = clpPrice;
+    cur().perUsdt = destPrice;
+
+    const now = new Date();
+    const horaStr = now.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+    status.textContent = "Precios actualizados desde Binance P2P a las " + horaStr + ".";
+
+    renderAll();
+  } catch (err) {
+    status.textContent = "No se pudo conectar con Binance (" + err.message + "). Puedes editar los precios manualmente mientras tanto.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Actualizar precios";
+  }
+}
+
+
+function renderAll() {
+  renderCurrencyTabs();
+  renderPrecios();
+  renderTiers();
+  renderAdmin();
+  renderPublicaSelector();
+  renderPublica();
+  renderWhatsApp();
+}
+
+renderAll();
+refreshPrices();
+</script>
+</body>
+</html>
