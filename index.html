@@ -276,11 +276,12 @@ let currencies = {
     flag: "🇧🇴",
     perUsdt: 9.33,
     tiers: [
-      { from: 0,      to: 100000,  mult: 0.964 },
-      { from: 100000, to: 200000,  mult: 0.980 },
-      { from: 200000, to: 500000,  mult: 0.983 },
-      { from: 500000, to: 1000000, mult: 0.984 },
-      { from: 1000000, to: null,   mult: 0.984 }
+      { from: 0,       to: 50000,   mult: 0.964 },
+      { from: 50000,   to: 100000,  mult: 0.974 },
+      { from: 100000,  to: 200000,  mult: 0.978 },
+      { from: 200000,  to: 500000,  mult: 0.981 },
+      { from: 500000,  to: 1000000, mult: 0.984 },
+      { from: 1000000, to: null,    mult: 0.984 }
     ]
   },
   VES: {
@@ -611,26 +612,34 @@ function renderWhatsApp() {
   lines.push(dia + ": " + fechaStr);
   lines.push("");
 
-  const sortedTiers = [...c.tiers].sort((a,b) => a.from - b.from);
+  // Orden descendente: primero los montos más grandes
+  const sortedTiers = [...c.tiers].sort((a,b) => b.from - a.from);
 
   sortedTiers.forEach((t, idx) => {
     const rate = tasaPublicadaPorMil(t.mult);
     const rateStr = rate.toFixed(2);
+    const isFirstTier = t.from === 0; // el tramo más chico (0 - X)
 
     if (t.to === null) {
+      // Tramo más grande, sin tope superior
       lines.push("Montos de " + fmt(t.from,0) + " arriba:");
       lines.push("        " + rateEmoji(rateStr));
       const ex1 = t.from;
       const ex2 = t.from * 2;
-      lines.push("🇨🇱 " + fmt(ex1,0) + " = " + fmt(ex1*(rate/1000),0) + activeCurrency + " " + c.flag);
-      lines.push("🇨🇱 " + fmt(ex2,0) + " = " + fmt(ex2*(rate/1000),0) + activeCurrency + " " + c.flag);
-    } else if (idx === 0) {
-      lines.push("Menores a " + fmt(t.to,0) + " a: " + rateStr);
+      lines.push("🇨🇱 " + fmt(ex1,0) + " = " + fmt(ex1*(rate/1000),0) + " " + activeCurrency + " " + c.flag);
+      lines.push("🇨🇱 " + fmt(ex2,0) + " = " + fmt(ex2*(rate/1000),0) + " " + activeCurrency + " " + c.flag);
+    } else if (isFirstTier) {
+      // Tramo más chico (0 - X)
+      lines.push("Menores a " + fmt(t.to,0) + ":");
+      lines.push("        " + rateEmoji(rateStr));
+      const ex = t.to;
+      lines.push("🇨🇱 " + fmt(ex,0) + " = " + fmt(ex*(rate/1000),0) + " " + activeCurrency + " " + c.flag);
     } else {
-      lines.push("Montos arriba de " + fmt(t.from,0) + ":");
+      // Tramos intermedios
+      lines.push("Montos desde " + fmt(t.from,0) + " hasta " + fmt(t.to,0) + ":");
       lines.push("        " + rateEmoji(rateStr));
       const ex = t.from;
-      lines.push("🇨🇱 " + fmt(ex,0) + " = " + fmt(ex*(rate/1000),0) + activeCurrency + " " + c.flag);
+      lines.push("🇨🇱 " + fmt(ex,0) + " = " + fmt(ex*(rate/1000),0) + " " + activeCurrency + " " + c.flag);
     }
     lines.push("");
   });
